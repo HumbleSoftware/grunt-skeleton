@@ -1,3 +1,9 @@
+var path = require('path');
+var lrSnippet = require('grunt-contrib-livereload/lib/utils').livereloadSnippet;
+var folderMount = function folderMount(connect, point) {
+  return connect.static(path.resolve(point));
+};
+
 /*global module:false*/
 module.exports = function(grunt) {
 
@@ -10,14 +16,6 @@ module.exports = function(grunt) {
         '<%= pkg.homepage ? "* " + pkg.homepage + "\n" : "" %>' +
         '* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
         ' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */'
-    },
-    lint: {
-      grunt : ['grunt.js'],
-      src : ['src/**/*.js'],
-      test : ['test/**/*.js']
-    },
-    qunit: {
-      files: ['test/**/*.html']
     },
     concat: {
       vendor: {
@@ -44,23 +42,30 @@ module.exports = function(grunt) {
         ],
         dest: 'dist/vendor-test.css'
       },
-      test: {
-        src: [
-          'test/**/*.js'
-        ],
-        dest: 'dist/test.js'
-      },
+//      test: {
+//        src: [
+//          'test/**/*.js'
+//        ],
+//        dest: 'dist/test.js'
+//      },
       src: {
         src: ['src/**/*.js'],
         dest: 'dist/src.js'
       },
-      dist: {
-        src: [
-          '<banner:meta.banner>',
-          'dist/src.js',
-          'dist/templates.js'
-        ],
-        dest: 'dist/<%= pkg.name %>.js'
+//      dist: {
+//        src: [
+//          '<banner:meta.banner>',
+//          'dist/src.js',
+//          'dist/templates.js'
+//        ],
+//        dest: 'dist/<%= pkg.name %>.js'
+//      }
+    },
+    copy: {
+      main: {
+        files: [
+          { expand: true, cwd: 'src/assets', src: ['**'], dest: 'dist/' }
+        ]
       }
     },
     min: {
@@ -77,40 +82,22 @@ module.exports = function(grunt) {
       ],
       tasks: 'build reload'
     },
-    jshint: {
-      options: {
-        curly: true,
-        eqeqeq: true,
-        immed: true,
-        latedef: true,
-        newcap: true,
-        noarg: true,
-        sub: true,
-        undef: true,
-        boss: true,
-        eqnull: true,
-        browser: true
-      },
-      globals: {},
-      test: {
-        globals: {
-          sinon: true,
-          expect: true,
-          describe: true,
-          it: true
+    uglify: {},
+    connect: {
+      livereload: {
+        options: {
+          port: 9001,
+          base: 'dist/',
+          middleware: function(connect, options) {
+            return [lrSnippet, folderMount(connect, options.base)]
+          }
         }
       }
     },
-    uglify: {},
-    server: {
-      port: 8999,
-      base: '.'
-    },
-    reload: {
-      port: 8001,
-      proxy: {
-        port: 8999,
-        host: 'localhost'
+    regarde: {
+      txt: {
+        files: ['index.html', 'templates/**/*', 'src/**/*'],
+        tasks: ['build', 'livereload']
       }
     },
     handlebars: {
@@ -121,10 +108,10 @@ module.exports = function(grunt) {
             // strip src/templates/ and .hbs
             return name.split('/').slice(2).join('/').slice(0, -4);
           },
-          namespace: ""
+          namespace: ''
         },
         files: {
-          "dist/templates.js": "src/templates/**/*.hbs"
+          'dist/templates.js': 'src/templates/**/*.hbs'
         }
       }
     },
@@ -132,34 +119,46 @@ module.exports = function(grunt) {
       development: {
         options: {
           // Scan for imports:
-          // paths: ["assets/css"]
+          // paths: ['assets/css']
         },
         files: {
-          "dist/app.css": "src/styles/**/*.less"
+          'dist/app.css': 'src/styles/**/*.less'
         }
       },
       production: {
         options: {
-          // paths: ["assets/css"],
+          // paths: ['assets/css'],
           yuicompress: true
         },
         files: {
-          "dist/app.css": "src/styles/**/*.less"
+          'dist/app.css': 'src/styles/**/*.less'
         }
       }
     },
     mocha: {
       index: ['test/index.html']
+    },
+    browserify: {
+      app: {
+        src: ['src/js/thing.js'],
+        dest: 'dist/app.js'
+      }
     }
   });
 
-  // Default task.
-  grunt.registerTask('default', 'server reload build watch');
-  grunt.registerTask('build', 'lint handlebars less concat');
-  grunt.registerTask('test', 'build mocha');
-
+  // Load tasks:
   grunt.loadNpmTasks('grunt-mocha');
-  grunt.loadNpmTasks('grunt-reload');
+  grunt.loadNpmTasks('grunt-regarde');
+  grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-contrib-connect');
+  grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-handlebars');
   grunt.loadNpmTasks('grunt-contrib-less');
+  grunt.loadNpmTasks('grunt-contrib-livereload');
+  grunt.loadNpmTasks('grunt-contrib-requirejs');
+
+  // Custom tasks:
+  grunt.registerTask('build', ['handlebars', 'less', 'browserify', 'concat', 'copy']);
+  grunt.registerTask('test', 'build mocha');
+  grunt.registerTask('default', ['livereload-start', 'connect', 'build', 'regarde']);
 };
