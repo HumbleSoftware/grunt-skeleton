@@ -3,7 +3,7 @@ Grunt Skeleton
 
 A simple grunt skeleton with:
 
-* [mocha testing](http://visionmedia.github.com/mocha/)
+* [mocha testing](http://mochajs.org/)
 * [handlebars templates](http://handlebarsjs.com/)
 * [less css](http://lesscss.org/)
 * [browser reloading](https://github.com/webxl/grunt-reload)
